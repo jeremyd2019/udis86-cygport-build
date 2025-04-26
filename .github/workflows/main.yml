@@ -11,9 +11,9 @@ jobs:
 
       - run: icacls .. /inheritance:r
 
-      - uses: actions/checkout@v4
-        with:
-          repository: https://gist.github.com/2af8697a6978f8c580f7e8956f049437.git
+      - name: checkout gist
+        run: |
+          git clone --depth 1 --single-branch https://gist.github.com/2af8697a6978f8c580f7e8956f049437.git .
 
       - uses: cygwin/cygwin-install-action@master
         with:
@@ -43,7 +43,7 @@ jobs:
           export PATH=/usr/bin:/usr/local/bin:$(cygpath ${SYSTEMROOT})/system32
           cygport udis86.cygport all test
           tar -Jcf builddir.tar.xz udis86-*-*.*/
-        shell: bash --noprofile --norc -o igncr -eo pipefail '{0}'
+        shell: D:\cygwin\bin\bash --noprofile --norc -o igncr -eo pipefail '{0}'
 
       # upload builddir for possible investigation of problems
       - name: Upload builddir archive
