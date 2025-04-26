@@ -14,6 +14,7 @@ jobs:
       - name: checkout gist
         run: |
           git clone --depth 1 --single-branch https://gist.github.com/2af8697a6978f8c580f7e8956f049437.git .
+          git rev-parse HEAD
 
       - uses: cygwin/cygwin-install-action@master
         with:
@@ -42,8 +43,14 @@ jobs:
         run: |
           export PATH=/usr/bin:/usr/local/bin:$(cygpath ${SYSTEMROOT})/system32
           cygport udis86.cygport download all test
-          tar -Jcf builddir.tar.xz udis86-*-*.*/
         shell: bash --noprofile --norc -o igncr -eo pipefail '{0}'
+
+      - name: Save builddir
+        run: |
+          tar -Jcf builddir.tar.xz udis86-*-*.*/
+          cp /var/log/setup.log.full .
+        shell: bash --noprofile --norc -o igncr -eo pipefail '{0}'
+        if: ${{ !cancelled() }}
 
       # upload builddir for possible investigation of problems
       - name: Upload builddir archive
