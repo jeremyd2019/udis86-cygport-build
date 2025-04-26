@@ -55,6 +55,10 @@ jobs:
             setup.log.full
         if: ${{ !cancelled() }}
 
-      # workaround problems with actions/checkout post-run step using cygwin git
-      - name: Avoid actions/checkout post-run step using Cygwin git
-        run: bash -c 'rm /usr/bin/git.exe'
+      # on success, upload packages from staging
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'udis86 packages'
+          path: udis86-*-*.*/dist/
+          if-no-files-found: ignore
