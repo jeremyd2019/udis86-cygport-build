@@ -1,0 +1,60 @@
+name: build
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - run: git config --global core.autocrlf input
+
+      - run: icacls .. /inheritance:r
+
+      - uses: actions/checkout@v4
+        with:
+          repository: https://gist.github.com/2af8697a6978f8c580f7e8956f049437.git
+
+      - uses: cygwin/cygwin-install-action@master
+        with:
+          platform: x86_64
+          packages: cygport,git,lzip,python3,pkg-config,yasm,python39-alabaster,python39-sphinx,python39-sphinxcontrib-applehelp,python39-sphinxcontrib-devhelp,python39-sphinxcontrib-htmlhelp,python39-sphinxcontrib-qthelp
+
+      - name: Start cygserver
+        run: |
+          export PATH=/usr/bin:/usr/local/bin:$(cygpath ${SYSTEMROOT})/system32
+          cygserver-config --yes
+          cygrunsrv -S cygserver
+          cygrunsrv -V -Q cygserver
+        shell: D:\cygwin\bin\bash.exe --noprofile --norc -o igncr -eo pipefail '{0}'
+        continue-on-error: true
+
+      # some old x86 devel packages contain .la files, which can mess up builds
+      - name: Clean .la files
+        run: |
+          export PATH=/usr/bin:/usr/local/bin:$(cygpath ${SYSTEMROOT})/system32
+          wget -q https://gist.githubusercontent.com/jon-turney/0338af595313f598bfab15a0ac0df847/raw/bd0eeca6be899e7846aa988fbcf15e4e12f5f842/zp_libtool_cleanlafiles.sh -O /etc/postinstall/zp_libtool_cleanlafiles.sh
+          bash /etc/postinstall/zp_libtool_cleanlafiles.sh
+        shell: D:\cygwin\bin\bash.exe --noprofile --norc -o igncr -eo pipefail '{0}'
+        continue-on-error: true
+
+      - name: Build packages
+        run: |
+          export PATH=/usr/bin:/usr/local/bin:$(cygpath ${SYSTEMROOT})/system32
+          cygport udis86.cygport all test
+          tar -Jcf builddir.tar.xz udis86-*-*.*/
+        shell: bash --noprofile --norc -o igncr -eo pipefail '{0}'
+
+      # upload builddir for possible investigation of problems
+      - name: Upload builddir archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'builddir'
+          path: |
+            builddir.tar.xz
+            setup.log.full
+        if: ${{ !cancelled() }}
+
+      # workaround problems with actions/checkout post-run step using cygwin git
+      - name: Avoid actions/checkout post-run step using Cygwin git
+        run: bash -c 'rm /usr/bin/git.exe'
